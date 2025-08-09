@@ -1,43 +1,66 @@
-import { createClient as supabaseCreateClient } from "@supabase/supabase-js"
+import { createClient as createSupabaseClient } from "@supabase/supabase-js"
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+// Check if Supabase is configured
+export function isSupabaseConfigured(): boolean {
+  return !!(
+    process.env.NEXT_PUBLIC_SUPABASE_URL &&
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY &&
+    process.env.NEXT_PUBLIC_SUPABASE_URL !== "your-project-url" &&
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY !== "your-anon-key"
+  )
+}
 
-export const createClient = () => {
-  if (!supabaseUrl || !supabaseKey) {
-    throw new Error("Supabase environment variables are not configured")
+// Create Supabase client
+export function createClient() {
+  if (!isSupabaseConfigured()) {
+    throw new Error("Supabase is not configured")
   }
-  return supabaseCreateClient(supabaseUrl, supabaseKey)
+
+  return createSupabaseClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!)
 }
 
-export const isSupabaseConfigured = () => {
-  return !!(supabaseUrl && supabaseKey)
-}
-
-// Check if tables exist in Supabase
-export const checkTablesExist = async () => {
+// Check if required tables exist
+export async function checkTablesExist(): Promise<boolean> {
   try {
     if (!isSupabaseConfigured()) return false
 
     const supabase = createClient()
 
-    // Try to query each table to see if it exists
-    const [usersCheck, locationsCheck, logsCheck] = await Promise.allSettled([
-      supabase.from("users").select("id").limit(1),
-      supabase.from("locations").select("id").limit(1),
-      supabase.from("server_logs").select("id").limit(1),
-    ])
+    // Try to query the users table
+    const { error } = await supabase.from("users").select("id").limit(1)
 
-    // If any query succeeds, tables exist
-    return (
-      usersCheck.status === "fulfilled" || locationsCheck.status === "fulfilled" || logsCheck.status === "fulfilled"
-    )
+    return !error
   } catch (error) {
+    console.error("Error checking tables:", error)
     return false
   }
 }
 
-// Enhanced mock data with location tracking
+// Get table columns dynamically
+export async function getTableColumns(tableName: string): Promise<string[]> {
+  try {
+    if (!isSupabaseConfigured()) return []
+
+    const supabase = createClient()
+
+    // Try to get a sample record to determine available columns
+    const { data, error } = await supabase.from(tableName).select("*").limit(1)
+
+    if (error || !data || data.length === 0) {
+      // Return basic columns as fallback
+      return tableName === "users"
+        ? ["id", "name", "email", "created_at"]
+        : ["id", "name", "address", "city", "country"]
+    }
+
+    return Object.keys(data[0])
+  } catch (error) {
+    console.error("Error getting table columns:", error)
+    return tableName === "users" ? ["id", "name", "email", "created_at"] : ["id", "name", "address", "city", "country"]
+  }
+}
+
+// Mock data for when Supabase is not configured
 export const mockUsers = [
   {
     id: 1,
@@ -50,9 +73,9 @@ export const mockUsers = [
     location_id: 1,
     current_latitude: 35.6892,
     current_longitude: 51.389,
-    last_location_update: new Date(Date.now() - 5 * 60 * 1000).toISOString(), // 5 minutes ago
+    last_location_update: new Date().toISOString(),
     is_location_enabled: true,
-    created_at: "2024-01-15T10:30:00Z",
+    created_at: new Date(Date.now() - 86400000 * 30).toISOString(),
     updated_at: new Date().toISOString(),
   },
   {
@@ -66,9 +89,9 @@ export const mockUsers = [
     location_id: 2,
     current_latitude: 32.6546,
     current_longitude: 51.668,
-    last_location_update: new Date(Date.now() - 10 * 60 * 1000).toISOString(), // 10 minutes ago
+    last_location_update: new Date().toISOString(),
     is_location_enabled: true,
-    created_at: "2024-01-16T11:30:00Z",
+    created_at: new Date(Date.now() - 86400000 * 25).toISOString(),
     updated_at: new Date().toISOString(),
   },
   {
@@ -80,12 +103,12 @@ export const mockUsers = [
     status: "inactive",
     role: "user",
     location_id: 3,
-    current_latitude: null,
-    current_longitude: null,
-    last_location_update: null,
+    current_latitude: 29.5918,
+    current_longitude: 52.5837,
+    last_location_update: new Date(Date.now() - 86400000 * 2).toISOString(),
     is_location_enabled: false,
-    created_at: "2024-01-17T12:30:00Z",
-    updated_at: new Date().toISOString(),
+    created_at: new Date(Date.now() - 86400000 * 20).toISOString(),
+    updated_at: new Date(Date.now() - 86400000 * 2).toISOString(),
   },
   {
     id: 4,
@@ -98,9 +121,9 @@ export const mockUsers = [
     location_id: 1,
     current_latitude: 35.695,
     current_longitude: 51.395,
-    last_location_update: new Date(Date.now() - 2 * 60 * 1000).toISOString(), // 2 minutes ago
+    last_location_update: new Date().toISOString(),
     is_location_enabled: true,
-    created_at: "2024-01-18T13:30:00Z",
+    created_at: new Date(Date.now() - 86400000 * 15).toISOString(),
     updated_at: new Date().toISOString(),
   },
   {
@@ -114,41 +137,9 @@ export const mockUsers = [
     location_id: 2,
     current_latitude: 32.66,
     current_longitude: 51.67,
-    last_location_update: new Date(Date.now() - 15 * 60 * 1000).toISOString(), // 15 minutes ago
+    last_location_update: new Date().toISOString(),
     is_location_enabled: true,
-    created_at: "2024-01-19T14:30:00Z",
-    updated_at: new Date().toISOString(),
-  },
-  {
-    id: 6,
-    name: "زهرا حسینی",
-    email: "zahra@example.com",
-    phone: "09124444444",
-    avatar_url: "/zahra-portrait.png",
-    status: "active",
-    role: "user",
-    location_id: 4,
-    current_latitude: 36.2605,
-    current_longitude: 59.6168,
-    last_location_update: new Date(Date.now() - 8 * 60 * 1000).toISOString(), // 8 minutes ago
-    is_location_enabled: true,
-    created_at: "2024-01-20T15:30:00Z",
-    updated_at: new Date().toISOString(),
-  },
-  {
-    id: 7,
-    name: "رضا موسوی",
-    email: "reza@example.com",
-    phone: "09123333333",
-    avatar_url: "/portrait-thoughtful-man.png",
-    status: "active",
-    role: "user",
-    location_id: 5,
-    current_latitude: 38.0962,
-    current_longitude: 46.2738,
-    last_location_update: new Date(Date.now() - 20 * 60 * 1000).toISOString(), // 20 minutes ago
-    is_location_enabled: true,
-    created_at: "2024-01-21T16:30:00Z",
+    created_at: new Date(Date.now() - 86400000 * 10).toISOString(),
     updated_at: new Date().toISOString(),
   },
 ]
@@ -162,8 +153,8 @@ export const mockLocations = [
     country: "ایران",
     latitude: 35.6892,
     longitude: 51.389,
-    created_at: "2024-01-10T09:00:00Z",
-    updated_at: new Date().toISOString(),
+    created_at: new Date(Date.now() - 86400000 * 60).toISOString(),
+    updated_at: new Date(Date.now() - 86400000 * 30).toISOString(),
   },
   {
     id: 2,
@@ -173,8 +164,8 @@ export const mockLocations = [
     country: "ایران",
     latitude: 32.6546,
     longitude: 51.668,
-    created_at: "2024-01-11T09:00:00Z",
-    updated_at: new Date().toISOString(),
+    created_at: new Date(Date.now() - 86400000 * 50).toISOString(),
+    updated_at: new Date(Date.now() - 86400000 * 25).toISOString(),
   },
   {
     id: 3,
@@ -184,8 +175,8 @@ export const mockLocations = [
     country: "ایران",
     latitude: 29.5918,
     longitude: 52.5837,
-    created_at: "2024-01-12T09:00:00Z",
-    updated_at: new Date().toISOString(),
+    created_at: new Date(Date.now() - 86400000 * 40).toISOString(),
+    updated_at: new Date(Date.now() - 86400000 * 20).toISOString(),
   },
   {
     id: 4,
@@ -195,8 +186,8 @@ export const mockLocations = [
     country: "ایران",
     latitude: 36.2605,
     longitude: 59.6168,
-    created_at: "2024-01-13T09:00:00Z",
-    updated_at: new Date().toISOString(),
+    created_at: new Date(Date.now() - 86400000 * 35).toISOString(),
+    updated_at: new Date(Date.now() - 86400000 * 15).toISOString(),
   },
   {
     id: 5,
@@ -206,95 +197,45 @@ export const mockLocations = [
     country: "ایران",
     latitude: 38.0962,
     longitude: 46.2738,
-    created_at: "2024-01-14T09:00:00Z",
-    updated_at: new Date().toISOString(),
+    created_at: new Date(Date.now() - 86400000 * 30).toISOString(),
+    updated_at: new Date(Date.now() - 86400000 * 10).toISOString(),
   },
 ]
 
 export const mockActivities = [
   {
     id: 1,
-    action: "SYSTEM_START",
-    details: "سیستم راه‌اندازی شد",
-    user_id: null,
-    created_at: "2024-01-20T08:00:00Z",
+    action: "USER_LOGIN",
+    details: "علی احمدی وارد سیستم شد",
+    user_id: 1,
+    created_at: new Date(Date.now() - 3600000).toISOString(),
   },
   {
     id: 2,
-    action: "USER_LOGIN",
-    details: "کاربر علی احمدی وارد سیستم شد",
-    user_id: 1,
-    created_at: "2024-01-20T08:30:00Z",
+    action: "LOCATION_UPDATE",
+    details: "موقعیت فاطمه محمدی به‌روزرسانی شد",
+    user_id: 2,
+    created_at: new Date(Date.now() - 7200000).toISOString(),
   },
   {
     id: 3,
-    action: "USER_LOCATION_UPDATE",
-    details: "موقعیت کاربر علی احمدی به‌روزرسانی شد",
-    user_id: 1,
-    created_at: new Date(Date.now() - 5 * 60 * 1000).toISOString(),
-  },
-  {
-    id: 4,
-    action: "USER_LOCATION_UPDATE",
-    details: "موقعیت کاربر فاطمه محمدی به‌روزرسانی شد",
-    user_id: 2,
-    created_at: new Date(Date.now() - 10 * 60 * 1000).toISOString(),
-  },
-  {
-    id: 5,
-    action: "CREATE_USER",
+    action: "USER_CREATED",
     details: "کاربر جدید مریم کریمی ایجاد شد",
     user_id: 4,
-    created_at: "2024-01-20T09:00:00Z",
-  },
-  {
-    id: 6,
-    action: "UPDATE_LOCATION",
-    details: "مکان دفتر مرکزی به‌روزرسانی شد",
-    user_id: null,
-    created_at: "2024-01-20T09:30:00Z",
-  },
-]
-
-export const mockLocationHistory = [
-  {
-    id: 1,
-    user_id: 1,
-    latitude: 35.6892,
-    longitude: 51.389,
-    accuracy: 10.5,
-    timestamp: new Date(Date.now() - 60 * 60 * 1000).toISOString(), // 1 hour ago
-  },
-  {
-    id: 2,
-    user_id: 1,
-    latitude: 35.69,
-    longitude: 51.39,
-    accuracy: 8.2,
-    timestamp: new Date(Date.now() - 30 * 60 * 1000).toISOString(), // 30 minutes ago
-  },
-  {
-    id: 3,
-    user_id: 2,
-    latitude: 32.6546,
-    longitude: 51.668,
-    accuracy: 12.1,
-    timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(), // 2 hours ago
+    created_at: new Date(Date.now() - 10800000).toISOString(),
   },
   {
     id: 4,
-    user_id: 2,
-    latitude: 32.655,
-    longitude: 51.669,
-    accuracy: 9.8,
-    timestamp: new Date(Date.now() - 60 * 60 * 1000).toISOString(), // 1 hour ago
+    action: "SYSTEM_BACKUP",
+    details: "پشتیبان‌گیری خودکار انجام شد",
+    user_id: null,
+    created_at: new Date(Date.now() - 14400000).toISOString(),
   },
   {
     id: 5,
-    user_id: 4,
-    latitude: 35.695,
-    longitude: 51.395,
-    accuracy: 7.5,
-    timestamp: new Date(Date.now() - 15 * 60 * 1000).toISOString(), // 15 minutes ago
+    action: "LOCATION_CREATED",
+    details: "موقعیت جدید شعبه تبریز ایجاد شد",
+    user_id: 1,
+    created_at: new Date(Date.now() - 18000000).toISOString(),
   },
 ]

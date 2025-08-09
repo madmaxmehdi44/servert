@@ -1,8 +1,27 @@
 -- Enable UUID extension
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
--- Create users table with enhanced fields
-CREATE TABLE IF NOT EXISTS users (
+-- Drop existing tables if they exist (for clean setup)
+DROP TABLE IF EXISTS user_location_history CASCADE;
+DROP TABLE IF EXISTS server_logs CASCADE;
+DROP TABLE IF EXISTS users CASCADE;
+DROP TABLE IF EXISTS locations CASCADE;
+
+-- Create locations table first (referenced by users)
+CREATE TABLE locations (
+    id BIGSERIAL PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    address TEXT NOT NULL,
+    city VARCHAR(255) NOT NULL,
+    country VARCHAR(255) NOT NULL,
+    latitude DECIMAL(10, 8),
+    longitude DECIMAL(11, 8),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Create users table with all enhanced fields
+CREATE TABLE users (
     id BIGSERIAL PRIMARY KEY,
     name VARCHAR(255) NOT NULL,
     email VARCHAR(255) UNIQUE NOT NULL,
@@ -16,24 +35,12 @@ CREATE TABLE IF NOT EXISTS users (
     last_location_update TIMESTAMP WITH TIME ZONE,
     is_location_enabled BOOLEAN DEFAULT false,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-);
-
--- Create locations table
-CREATE TABLE IF NOT EXISTS locations (
-    id BIGSERIAL PRIMARY KEY,
-    name VARCHAR(255) NOT NULL,
-    address TEXT NOT NULL,
-    city VARCHAR(255) NOT NULL,
-    country VARCHAR(255) NOT NULL,
-    latitude DECIMAL(10, 8),
-    longitude DECIMAL(11, 8),
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    FOREIGN KEY (location_id) REFERENCES locations(id) ON DELETE SET NULL
 );
 
 -- Create user_location_history table for tracking location changes
-CREATE TABLE IF NOT EXISTS user_location_history (
+CREATE TABLE user_location_history (
     id BIGSERIAL PRIMARY KEY,
     user_id BIGINT NOT NULL,
     latitude DECIMAL(10, 8) NOT NULL,
@@ -44,22 +51,14 @@ CREATE TABLE IF NOT EXISTS user_location_history (
 );
 
 -- Create server_logs table
-CREATE TABLE IF NOT EXISTS server_logs (
+CREATE TABLE server_logs (
     id BIGSERIAL PRIMARY KEY,
     action VARCHAR(255) NOT NULL,
     details TEXT,
     user_id BIGINT,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
 );
-
--- Add foreign key constraints
-ALTER TABLE users 
-ADD CONSTRAINT fk_users_location 
-FOREIGN KEY (location_id) REFERENCES locations(id) ON DELETE SET NULL;
-
-ALTER TABLE server_logs 
-ADD CONSTRAINT fk_logs_user 
-FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL;
 
 -- Create indexes for better performance
 CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
@@ -78,19 +77,17 @@ INSERT INTO locations (name, address, city, country, latitude, longitude) VALUES
 ('شعبه اصفهان', 'خیابان چهارباغ، پلاک 456', 'اصفهان', 'ایران', 32.6546, 51.6680),
 ('شعبه شیراز', 'خیابان زند، پلاک 789', 'شیراز', 'ایران', 29.5918, 52.5837),
 ('شعبه مشهد', 'خیابان امام رضا، پلاک 321', 'مشهد', 'ایران', 36.2605, 59.6168),
-('شعبه تبریز', 'خیابان شهریار، پلاک 654', 'تبریز', 'ایران', 38.0962, 46.2738)
-ON CONFLICT DO NOTHING;
+('شعبه تبریز', 'خیابان شهریار، پلاک 654', 'تبریز', 'ایران', 38.0962, 46.2738);
 
 -- Insert sample users with live locations
-INSERT INTO users (name, email, phone, status, role, location_id, current_latitude, current_longitude, last_location_update, is_location_enabled) VALUES
-('علی احمدی', 'ali@example.com', '09121234567', 'active', 'admin', 1, 35.6892, 51.3890, NOW(), true),
-('فاطمه محمدی', 'fateme@example.com', '09129876543', 'active', 'user', 2, 32.6546, 51.6680, NOW(), true),
-('حسن رضایی', 'hassan@example.com', '09123456789', 'inactive', 'user', 3, 29.5918, 52.5837, NOW(), false),
-('مریم کریمی', 'maryam@example.com', '09127654321', 'active', 'manager', 1, 35.6950, 51.3950, NOW(), true),
-('محمد صادقی', 'mohammad@example.com', '09125555555', 'active', 'user', 2, 32.6600, 51.6700, NOW(), true),
-('زهرا حسینی', 'zahra@example.com', '09124444444', 'active', 'user', 4, 36.2605, 59.6168, NOW(), true),
-('رضا موسوی', 'reza@example.com', '09123333333', 'active', 'user', 5, 38.0962, 46.2738, NOW(), true)
-ON CONFLICT (email) DO NOTHING;
+INSERT INTO users (name, email, phone, avatar_url, status, role, location_id, current_latitude, current_longitude, last_location_update, is_location_enabled) VALUES
+('علی احمدی', 'ali@example.com', '09121234567', '/ali-portrait.png', 'active', 'admin', 1, 35.6892, 51.3890, NOW(), true),
+('فاطمه محمدی', 'fateme@example.com', '09129876543', '/portrait-Fateme.png', 'active', 'manager', 2, 32.6546, 51.6680, NOW(), true),
+('حسن رضایی', 'hassan@example.com', '09123456789', '/portrait-thoughtful-man.png', 'inactive', 'user', 3, 29.5918, 52.5837, NOW(), false),
+('مریم کریمی', 'maryam@example.com', '09127654321', '/maryam-portrait.png', 'active', 'user', 1, 35.6950, 51.3950, NOW(), true),
+('محمد صادقی', 'mohammad@example.com', '09125555555', '/mohammad-calligraphy.png', 'active', 'user', 2, 32.6600, 51.6700, NOW(), true),
+('زهرا حسینی', 'zahra@example.com', '09124444444', '/zahra-portrait.png', 'active', 'user', 4, 36.2605, 59.6168, NOW(), true),
+('رضا موسوی', 'reza@example.com', '09123333333', '/portrait-thoughtful-man.png', 'active', 'user', 5, 38.0962, 46.2738, NOW(), true);
 
 -- Insert sample location history
 INSERT INTO user_location_history (user_id, latitude, longitude, accuracy, timestamp) VALUES
@@ -99,8 +96,7 @@ INSERT INTO user_location_history (user_id, latitude, longitude, accuracy, times
 (2, 32.6546, 51.6680, 12.1, NOW() - INTERVAL '2 hours'),
 (2, 32.6550, 51.6690, 9.8, NOW() - INTERVAL '1 hour'),
 (4, 35.6950, 51.3950, 7.5, NOW() - INTERVAL '15 minutes'),
-(5, 32.6600, 51.6700, 11.3, NOW() - INTERVAL '45 minutes')
-ON CONFLICT DO NOTHING;
+(5, 32.6600, 51.6700, 11.3, NOW() - INTERVAL '45 minutes');
 
 -- Insert sample activities
 INSERT INTO server_logs (action, details, user_id) VALUES
@@ -108,8 +104,7 @@ INSERT INTO server_logs (action, details, user_id) VALUES
 ('DATABASE_INIT', 'پایگاه داده مقداردهی اولیه شد', NULL),
 ('USER_LOCATION_UPDATE', 'موقعیت کاربر علی احمدی به‌روزرسانی شد', 1),
 ('USER_LOCATION_UPDATE', 'موقعیت کاربر فاطمه محمدی به‌روزرسانی شد', 2),
-('SAMPLE_DATA_INSERTED', 'داده‌های نمونه وارد شد', NULL)
-ON CONFLICT DO NOTHING;
+('SAMPLE_DATA_INSERTED', 'داده‌های نمونه وارد شد', NULL);
 
 -- Create function to update updated_at timestamp
 CREATE OR REPLACE FUNCTION update_updated_at_column()

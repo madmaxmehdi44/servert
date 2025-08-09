@@ -1,25 +1,43 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  experimental: {
+    serverComponentsExternalPackages: ['leaflet'],
+  },
   webpack: (config, { isServer }) => {
-    // Handle Leaflet on the client side
     if (!isServer) {
       config.resolve.fallback = {
         ...config.resolve.fallback,
         fs: false,
-      };
+        net: false,
+        tls: false,
+      }
     }
-    return config;
+    
+    // Handle Leaflet
+    config.module.rules.push({
+      test: /\.js$/,
+      include: /node_modules\/leaflet/,
+      use: {
+        loader: 'babel-loader',
+        options: {
+          presets: ['@babel/preset-env'],
+        },
+      },
+    })
+
+    return config
   },
   transpilePackages: ['leaflet', 'react-leaflet'],
+  images: {
+    domains: ['images.unsplash.com', 'via.placeholder.com'],
+    unoptimized: true,
+  },
   eslint: {
     ignoreDuringBuilds: true,
   },
   typescript: {
     ignoreBuildErrors: true,
   },
-  images: {
-    unoptimized: true,
-  },
-};
+}
 
-export default nextConfig;
+export default nextConfig
