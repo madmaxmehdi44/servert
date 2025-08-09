@@ -2,21 +2,24 @@ import { createClient as createSupabaseClient } from "@supabase/supabase-js"
 
 // Check if Supabase is configured
 export function isSupabaseConfigured(): boolean {
-  return !!(
-    process.env.NEXT_PUBLIC_SUPABASE_URL &&
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY &&
-    process.env.NEXT_PUBLIC_SUPABASE_URL !== "your-project-url" &&
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY !== "your-anon-key"
-  )
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+
+  return !!(url && key && url !== "your-project-url" && key !== "your-anon-key" && url.startsWith("http"))
 }
 
-// Create Supabase client
+// Create Supabase client with error handling
 export function createClient() {
   if (!isSupabaseConfigured()) {
-    throw new Error("Supabase is not configured")
+    throw new Error("Supabase is not properly configured")
   }
 
-  return createSupabaseClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!)
+  try {
+    return createSupabaseClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!)
+  } catch (error) {
+    console.error("Failed to create Supabase client:", error)
+    throw new Error("Failed to initialize database connection")
+  }
 }
 
 // Check if required tables exist
@@ -70,6 +73,8 @@ export const mockUsers = [
     avatar_url: "/ali-portrait.png",
     status: "active",
     role: "admin",
+    auth_provider: "email",
+    google_id: null,
     location_id: 1,
     current_latitude: 35.6892,
     current_longitude: 51.389,
@@ -86,6 +91,8 @@ export const mockUsers = [
     avatar_url: "/portrait-Fateme.png",
     status: "active",
     role: "manager",
+    auth_provider: "google",
+    google_id: "google_123456",
     location_id: 2,
     current_latitude: 32.6546,
     current_longitude: 51.668,
@@ -102,6 +109,8 @@ export const mockUsers = [
     avatar_url: "/portrait-thoughtful-man.png",
     status: "inactive",
     role: "user",
+    auth_provider: "email",
+    google_id: null,
     location_id: 3,
     current_latitude: 29.5918,
     current_longitude: 52.5837,
@@ -118,6 +127,8 @@ export const mockUsers = [
     avatar_url: "/maryam-portrait.png",
     status: "active",
     role: "user",
+    auth_provider: "email",
+    google_id: null,
     location_id: 1,
     current_latitude: 35.695,
     current_longitude: 51.395,
@@ -134,6 +145,8 @@ export const mockUsers = [
     avatar_url: "/mohammad-calligraphy.png",
     status: "active",
     role: "user",
+    auth_provider: "google",
+    google_id: "google_789012",
     location_id: 2,
     current_latitude: 32.66,
     current_longitude: 51.67,
@@ -212,30 +225,30 @@ export const mockActivities = [
   },
   {
     id: 2,
-    action: "LOCATION_UPDATE",
-    details: "موقعیت فاطمه محمدی به‌روزرسانی شد",
+    action: "GOOGLE_LOGIN",
+    details: "فاطمه محمدی از طریق گوگل وارد شد",
     user_id: 2,
     created_at: new Date(Date.now() - 7200000).toISOString(),
   },
   {
     id: 3,
-    action: "USER_CREATED",
-    details: "کاربر جدید مریم کریمی ایجاد شد",
+    action: "USER_SIGNUP",
+    details: "کاربر جدید مریم کریمی ثبت‌نام کرد",
     user_id: 4,
     created_at: new Date(Date.now() - 10800000).toISOString(),
   },
   {
     id: 4,
-    action: "SYSTEM_BACKUP",
-    details: "پشتیبان‌گیری خودکار انجام شد",
-    user_id: null,
+    action: "LOCATION_UPDATE",
+    details: "موقعیت محمد صادقی به‌روزرسانی شد",
+    user_id: 5,
     created_at: new Date(Date.now() - 14400000).toISOString(),
   },
   {
     id: 5,
-    action: "LOCATION_CREATED",
-    details: "موقعیت جدید شعبه تبریز ایجاد شد",
-    user_id: 1,
+    action: "SYSTEM_BACKUP",
+    details: "پشتیبان‌گیری خودکار انجام شد",
+    user_id: null,
     created_at: new Date(Date.now() - 18000000).toISOString(),
   },
 ]

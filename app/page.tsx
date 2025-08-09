@@ -11,9 +11,16 @@ export default function Home() {
               <h1 className="text-3xl font-bold text-center text-gray-800 mb-6">🚀 Simple Server on Vercel</h1>
               <p className="text-center text-gray-600 mb-8">سرور با موفقیت روی Vercel راه‌اندازی شده است!</p>
             </div>
-            <Link href="/dashboard">
-              <Button className="gap-2">📊 داشبورد مدیریت</Button>
-            </Link>
+            <div className="flex gap-4">
+              <Link href="/auth">
+                <Button className="gap-2">🔐 ورود / ثبت‌نام</Button>
+              </Link>
+              <Link href="/dashboard">
+                <Button variant="outline" className="gap-2 bg-transparent">
+                  📊 داشبورد مدیریت
+                </Button>
+              </Link>
+            </div>
           </div>
 
           <h2 className="text-2xl font-semibold text-gray-800 mb-4">📋 Available Endpoints:</h2>
@@ -43,17 +50,80 @@ export default function Home() {
               <span className="bg-green-500 text-white px-2 py-1 rounded text-sm font-medium">GET</span>
               <strong className="ml-2">/api/time</strong> - زمان سرور
             </div>
+
+            <div className="bg-green-50 p-4 rounded-lg border-l-4 border-green-500">
+              <span className="bg-red-600 text-white px-2 py-1 rounded text-sm font-medium">POST</span>
+              <strong className="ml-2">/api/auth/google</strong> - احراز هویت گوگل
+            </div>
+
+            <div className="bg-green-50 p-4 rounded-lg border-l-4 border-green-500">
+              <span className="bg-red-600 text-white px-2 py-1 rounded text-sm font-medium">POST</span>
+              <strong className="ml-2">/api/auth/login</strong> - ورود با ایمیل
+            </div>
+
+            <div className="bg-green-50 p-4 rounded-lg border-l-4 border-green-500">
+              <span className="bg-red-600 text-white px-2 py-1 rounded text-sm font-medium">POST</span>
+              <strong className="ml-2">/api/auth/signup</strong> - ثبت‌نام با ایمیل
+            </div>
           </div>
 
           <div className="mt-8">
-            <h3 className="text-xl font-semibold text-gray-800 mb-4">🧪 Test the API:</h3>
-            <p className="text-gray-600 mb-4">برای تست API می‌توانید از curl یا Postman استفاده کنید:</p>
+            <h3 className="text-xl font-semibold text-gray-800 mb-4">🔐 Google Authentication Features:</h3>
+            <div className="bg-gradient-to-r from-blue-50 to-green-50 p-6 rounded-lg">
+              <ul className="space-y-2 text-gray-700">
+                <li className="flex items-center gap-2">
+                  <span className="w-2 h-2 bg-green-500 rounded-full"></span>
+                  ورود و ثبت‌نام با گوگل
+                </li>
+                <li className="flex items-center gap-2">
+                  <span className="w-2 h-2 bg-green-500 rounded-full"></span>
+                  ورود و ثبت‌نام با ایمیل و رمز عبور
+                </li>
+                <li className="flex items-center gap-2">
+                  <span className="w-2 h-2 bg-green-500 rounded-full"></span>
+                  مدیریت جلسات کاربری امن
+                </li>
+                <li className="flex items-center gap-2">
+                  <span className="w-2 h-2 bg-green-500 rounded-full"></span>
+                  ردیابی موقعیت مکانی در هنگام ورود
+                </li>
+                <li className="flex items-center gap-2">
+                  <span className="w-2 h-2 bg-green-500 rounded-full"></span>
+                  تشخیص خودکار نوع دستگاه
+                </li>
+                <li className="flex items-center gap-2">
+                  <span className="w-2 h-2 bg-green-500 rounded-full"></span>
+                  لاگ کامل فعالیت‌های کاربران
+                </li>
+              </ul>
+            </div>
+          </div>
+
+          <div className="mt-8">
+            <h3 className="text-xl font-semibold text-gray-800 mb-4">🧪 Test the Authentication:</h3>
+            <p className="text-gray-600 mb-4">برای تست احراز هویت می‌توانید:</p>
             <div className="bg-gray-100 p-4 rounded-lg overflow-x-auto">
               <pre className="text-sm">
-                {`curl https://your-domain.vercel.app/api/users
-curl -X POST https://your-domain.vercel.app/api/users \\
+                {`# ورود با گوگل (نیاز به تنظیم Google OAuth)
+# یا استفاده از حالت نمایشی
+
+# ثبت‌نام با ایمیل
+curl -X POST /api/auth/signup \\
   -H "Content-Type: application/json" \\
-  -d '{"name":"نام جدید","email":"test@example.com"}'`}
+  -d '{
+    "name": "نام کاربر",
+    "email": "user@example.com",
+    "password": "password123",
+    "phone": "09123456789"
+  }'
+
+# ورود با ایمیل
+curl -X POST /api/auth/login \\
+  -H "Content-Type: application/json" \\
+  -d '{
+    "email": "user@example.com",
+    "password": "password123"
+  }'`}
               </pre>
             </div>
           </div>
