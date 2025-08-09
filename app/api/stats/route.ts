@@ -1,5 +1,12 @@
 import { NextResponse } from "next/server"
-import { createClient, isSupabaseConfigured, mockUsers, mockLocations, mockActivities } from "@/lib/database"
+import {
+  createClient,
+  isSupabaseConfigured,
+  checkTablesExist,
+  mockUsers,
+  mockLocations,
+  mockActivities,
+} from "@/lib/database"
 
 export async function GET() {
   try {
@@ -18,25 +25,71 @@ export async function GET() {
         data: stats,
         timestamp: new Date().toISOString(),
         mock: true,
+        reason: "Supabase not configured",
+      })
+    }
+
+    // Check if tables exist
+    const tablesExist = await checkTablesExist()
+    if (!tablesExist) {
+      console.log("Using mock data - Database tables not found")
+      const stats = {
+        total_users: mockUsers.length,
+        active_users: mockUsers.filter((u) => u.status === "active").length,
+        total_locations: mockLocations.length,
+        total_activities: mockActivities.length,
+      }
+
+      return NextResponse.json({
+        success: true,
+        data: stats,
+        timestamp: new Date().toISOString(),
+        mock: true,
+        reason: "Database tables not found",
       })
     }
 
     const supabase = createClient()
 
     // Get users count
-    const { count: usersCount } = await supabase.from("users").select("*", { count: "exact", head: true })
+    const { count: usersCount, error: usersError } = await supabase
+      .from("users")
+      .select("*", { count: "exact", head: true })
 
     // Get active users count
-    const { count: activeUsersCount } = await supabase
+    const { count: activeUsersCount, error: activeUsersError } = await supabase
       .from("users")
       .select("*", { count: "exact", head: true })
       .eq("status", "active")
 
     // Get locations count
-    const { count: locationsCount } = await supabase.from("locations").select("*", { count: "exact", head: true })
+    const { count: locationsCount, error: locationsError } = await supabase
+      .from("locations")
+      .select("*", { count: "exact", head: true })
 
     // Get activities count
-    const { count: activitiesCount } = await supabase.from("server_logs").select("*", { count: "exact", head: true })
+    const { count: activitiesCount, error: activitiesError } = await supabase
+      .from("server_logs")
+      .select("*", { count: "exact", head: true })
+
+    // If any query fails, use mock data
+    if (usersError || activeUsersError || locationsError || activitiesError) {
+      console.error("Database errors:", { usersError, activeUsersError, locationsError, activitiesError })
+      const stats = {
+        total_users: mockUsers.length,
+        active_users: mockUsers.filter((u) => u.status === "active").length,
+        total_locations: mockLocations.length,
+        total_activities: mockActivities.length,
+      }
+
+      return NextResponse.json({
+        success: true,
+        data: stats,
+        timestamp: new Date().toISOString(),
+        mock: true,
+        reason: "Database query error",
+      })
+    }
 
     const stats = {
       total_users: usersCount || 0,
@@ -53,7 +106,7 @@ export async function GET() {
   } catch (error) {
     console.error("Error fetching stats:", error)
 
-    // Fallback to mock data on error
+    // Fallback to mock data on any error
     const stats = {
       total_users: mockUsers.length,
       active_users: mockUsers.filter((u) => u.status === "active").length,
@@ -66,7 +119,8 @@ export async function GET() {
       data: stats,
       timestamp: new Date().toISOString(),
       mock: true,
-      error: "Using fallback data",
+      reason: "Unexpected error",
+      error: error instanceof Error ? error.message : "Unknown error",
     })
   }
 }

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server"
-import { createClient, isSupabaseConfigured, mockActivities } from "@/lib/database"
+import { createClient, isSupabaseConfigured, checkTablesExist, mockActivities } from "@/lib/database"
 
 export async function GET() {
   try {
@@ -12,6 +12,21 @@ export async function GET() {
         total: mockActivities.length,
         timestamp: new Date().toISOString(),
         mock: true,
+        reason: "Supabase not configured",
+      })
+    }
+
+    // Check if tables exist
+    const tablesExist = await checkTablesExist()
+    if (!tablesExist) {
+      console.log("Using mock data - Database tables not found")
+      return NextResponse.json({
+        success: true,
+        data: mockActivities,
+        total: mockActivities.length,
+        timestamp: new Date().toISOString(),
+        mock: true,
+        reason: "Database tables not found",
       })
     }
 
@@ -23,7 +38,19 @@ export async function GET() {
       .order("created_at", { ascending: false })
       .limit(100)
 
-    if (error) throw error
+    if (error) {
+      console.error("Supabase error:", error)
+      // Fallback to mock data on database error
+      return NextResponse.json({
+        success: true,
+        data: mockActivities,
+        total: mockActivities.length,
+        timestamp: new Date().toISOString(),
+        mock: true,
+        reason: "Database error",
+        error: error.message,
+      })
+    }
 
     return NextResponse.json({
       success: true,
@@ -34,14 +61,15 @@ export async function GET() {
   } catch (error) {
     console.error("Error fetching activities:", error)
 
-    // Fallback to mock data on error
+    // Fallback to mock data on any error
     return NextResponse.json({
       success: true,
       data: mockActivities,
       total: mockActivities.length,
       timestamp: new Date().toISOString(),
       mock: true,
-      error: "Using fallback data",
+      reason: "Unexpected error",
+      error: error instanceof Error ? error.message : "Unknown error",
     })
   }
 }
